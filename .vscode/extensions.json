@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-azuretools.vscode-docker",
+    "humao.rest-client",
+    "cweijan.vscode-database-client2",
+    "redhat.vscode-yaml",
+    "christian-kohler.npm-intellisense",
+    "eg2.vscode-npm-script"
+  ]
+}

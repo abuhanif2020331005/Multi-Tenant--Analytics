@@ -1,0 +1,43 @@
+### 1. Health Check - Auth Service
+GET http://localhost:8001/health
+
+### 2. Health Check - User Service
+GET http://localhost:8002/health
+
+### 3. Health Check - Analytics Service
+GET http://localhost:8003/health
+
+### 4. Login (MOST IMPORTANT TEST)
+# @name login
+POST http://localhost:8001/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@acme.com",
+  "password": "password123"
+}
+
+### 5. Extract token and test protected route
+@accessToken = {{login.response.body.accessToken}}
+
+### 6. Get Current User
+GET http://localhost:8002/users/me
+Authorization: Bearer {{accessToken}}
+
+### 7. Create Event
+POST http://localhost:8003/events
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "userId": "test_user_123",
+  "eventType": "page_view",
+  "eventData": {
+    "page": "/dashboard",
+    "duration": 30
+  }
+}
+
+### 8. List Events
+GET http://localhost:8003/events
+Authorization: Bearer {{accessToken}}
