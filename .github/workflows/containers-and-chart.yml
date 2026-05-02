@@ -78,8 +78,8 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
-          context: backend-platform
-          file: backend-platform/${{ matrix.dockerfile }}
+          context: .
+          file: ${{ matrix.dockerfile }}
           push: ${{ github.ref == 'refs/heads/main' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -89,9 +89,6 @@ jobs:
     needs: build-images
     permissions:
       contents: read
-    defaults:
-      run:
-        working-directory: backend-platform
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -109,4 +106,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-platform-helm-chart
-          path: backend-platform/dist/*.tgz
+          path: dist/*.tgz

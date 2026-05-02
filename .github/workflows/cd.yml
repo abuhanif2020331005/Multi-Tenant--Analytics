@@ -30,13 +30,12 @@ jobs:
         continue-on-error: true
 
       - name: Update image tags in Helm values
-        working-directory: backend-platform/deploy/helm/backend-platform
+        working-directory: deploy/helm/backend-platform
         run: |
           SHA=${{ github.sha }}
           sed -i "s/tag: latest/tag: ${SHA}/g" values.yaml
 
       - name: Helm upgrade (dry-run)
-        working-directory: backend-platform
         run: |
           helm upgrade --install backend-platform deploy/helm/backend-platform \
             --namespace analytics-platform \
