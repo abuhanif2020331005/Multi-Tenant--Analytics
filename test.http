@@ -1,31 +1,159 @@
-### 1. Health Check - Auth Service
+### 1. Health Check - API Gateway
+GET http://localhost:8000/health
+
+### 1b. API Gateway Metrics
+GET http://localhost:8000/metrics
+
+### 1d. API Gateway Prometheus Metrics
+GET http://localhost:8000/metrics/prometheus
+
+### 1c. Dashboard App Health
+GET http://localhost:3000/health
+
+### 1g. Tenant Dashboard Health
+GET http://localhost:3002/health
+
+### 1e. Prometheus UI
+GET http://localhost:9090/-/healthy
+
+### 1f. Grafana Health
+GET http://localhost:3001/api/health
+
+### 2. Health Check - Auth Service
 GET http://localhost:8001/health
 
-### 2. Health Check - User Service
+### 2b. Auth Service Metrics
+GET http://localhost:8001/metrics
+
+### 2c. Auth Service Prometheus Metrics
+GET http://localhost:8001/metrics/prometheus
+
+### 3. Health Check - User Service
 GET http://localhost:8002/health
 
-### 3. Health Check - Analytics Service
+### 3b. User Service Metrics
+GET http://localhost:8002/metrics
+
+### 3c. User Service Prometheus Metrics
+GET http://localhost:8002/metrics/prometheus
+
+### 4. Health Check - Analytics Service
 GET http://localhost:8003/health
 
-### 4. Login (MOST IMPORTANT TEST)
+### 4b. Analytics Service Metrics
+GET http://localhost:8003/metrics
+
+### 4c. Analytics Service Prometheus Metrics
+GET http://localhost:8003/metrics/prometheus
+
+### 5. Health Check - Event Ingestion Service
+GET http://localhost:8004/health
+
+### 5a. Event Ingestion Service Metrics
+GET http://localhost:8004/metrics
+
+### 5aa. Event Ingestion Service Prometheus Metrics
+GET http://localhost:8004/metrics/prometheus
+
+### 5b. Inspect Queued Outbox Events Once Postgres Is Running
+# Run in SQL client:
+# SELECT id, status, event_type, source, created_at FROM event_outbox ORDER BY created_at DESC;
+
+### 5c. Event Processor Health
+GET http://localhost:8007/health
+
+### 5d. Event Processor Stats
+GET http://localhost:8007/processor/stats
+
+### 5e. Event Processor Metrics
+GET http://localhost:8007/metrics
+
+### 5f. Event Processor Prometheus Metrics
+GET http://localhost:8007/metrics/prometheus
+
+### 6. Health Check - Recommendation Service
+GET http://localhost:8005/health
+
+### 6b. Recommendation Service Metrics
+GET http://localhost:8005/metrics
+
+### 6c. Recommendation Service Prometheus Metrics
+GET http://localhost:8005/metrics/prometheus
+
+### 7. Health Check - Fraud Detection Service
+GET http://localhost:8006/health
+
+### 7b. Fraud Detection Service Metrics
+GET http://localhost:8006/metrics
+
+### 7c. Fraud Detection Service Prometheus Metrics
+GET http://localhost:8006/metrics/prometheus
+
+### 7d. Catalog Service Health
+GET http://localhost:8008/health
+
+### 7e. Catalog Products Through Gateway
+GET http://localhost:8000/catalog/products?limit=10&offset=0
+Authorization: Bearer {{accessToken}}
+
+### 7f. Catalog Categories Through Gateway
+GET http://localhost:8000/catalog/categories
+Authorization: Bearer {{accessToken}}
+
+### 7g. Create Catalog Product Through Gateway
+POST http://localhost:8000/catalog/products
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "productId": "sku_ridge_lamp",
+  "name": "Ridge Camp Lamp",
+  "category": "camping",
+  "description": "Rechargeable camp lamp for alpine nights.",
+  "price": 59,
+  "currency": "USD",
+  "metadata": {
+    "tags": ["lamp", "camping", "lighting"]
+  },
+  "isActive": true
+}
+
+### 7h. Semantic Catalog Search Through Gateway
+GET http://localhost:8000/catalog/search/semantic?q=waterproof%20hiking%20jacket&limit=5
+Authorization: Bearer {{accessToken}}
+
+### 7i. Semantic Reindex Status Through Gateway
+GET http://localhost:8000/catalog/search/reindex/status
+Authorization: Bearer {{accessToken}}
+
+### 7j. Rebuild Semantic Index Through Gateway
+POST http://localhost:8000/catalog/search/reindex?limit=250
+Authorization: Bearer {{accessToken}}
+
+### 7k. Semantic Recommendations Through Gateway
+GET http://localhost:8000/recommendations/semantic?q=waterproof%20hiking%20jacket&limit=5
+Authorization: Bearer {{accessToken}}
+
+### 8. Login Through Gateway
 # @name login
-POST http://localhost:8001/auth/login
+POST http://localhost:8000/auth/login
 Content-Type: application/json
 
 {
   "email": "admin@acme.com",
-  "password": "password123"
+  "password": "password123",
+  "tenantSlug": "acme"
 }
 
-### 5. Extract token and test protected route
+### 9. Extract token and test protected route
 @accessToken = {{login.response.body.accessToken}}
 
-### 6. Get Current User
-GET http://localhost:8002/users/me
+### 10. Get Current User Through Gateway
+GET http://localhost:8000/users/me
 Authorization: Bearer {{accessToken}}
 
-### 7. Create Event
-POST http://localhost:8003/events
+### 11. Create Event Through Gateway
+POST http://localhost:8000/events
 Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
@@ -38,6 +166,279 @@ Content-Type: application/json
   }
 }
 
-### 8. List Events
-GET http://localhost:8003/events
+### 12. List Events Through Gateway
+GET http://localhost:8000/events
 Authorization: Bearer {{accessToken}}
+
+### 12b. Event Summary Through Gateway
+GET http://localhost:8000/events/summary?days=30
+Authorization: Bearer {{accessToken}}
+
+### 13. Ingest Events Through Gateway With Tenant API Key
+POST http://localhost:8000/ingest/events
+Content-Type: application/json
+x-tenant-api-key: acme_api_key_12345
+
+{
+  "source": "storefront-web",
+  "events": [
+    {
+      "userId": "anon_001",
+      "eventType": "product_view",
+      "eventData": {
+        "productId": "sku_123",
+        "category": "jackets"
+      }
+    },
+    {
+      "userId": "anon_001",
+      "eventType": "add_to_cart",
+      "eventData": {
+        "productId": "sku_123",
+        "quantity": 1
+      }
+    }
+  ]
+}
+
+### 13b. In outbox mode, call the ingestion endpoint first, then verify the processor moves records into events.
+
+### 14. Get Popular Recommendations Through Gateway
+GET http://localhost:8000/recommendations/popular?limit=5&days=30
+Authorization: Bearer {{accessToken}}
+
+### 15. Get User Recommendations Through Gateway
+GET http://localhost:8000/recommendations/for-user?limit=5&days=30&userId=anon_001
+Authorization: Bearer {{accessToken}}
+
+### 15b. Get Similar Products Through Gateway
+GET http://localhost:8000/recommendations/similar/sku_hiking_shell?limit=5&days=60
+Authorization: Bearer {{accessToken}}
+
+### 16. Create Purchase Events For Fraud Detection
+POST http://localhost:8000/events
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "userId": "anon_001",
+  "eventType": "purchase",
+  "eventData": {
+    "productId": "sku_123",
+    "amount": 799
+  }
+}
+
+### 17. Analyze Fraud Signals Through Gateway
+GET http://localhost:8000/fraud/analyze?userId=anon_001&windowMinutes=60&purchaseAmountThreshold=500&velocityThreshold=1&sharedIpThreshold=1
+Authorization: Bearer {{accessToken}}
+
+### 18. List Fraud Alerts Through Gateway
+GET http://localhost:8000/fraud/alerts?hours=24&minRiskScore=20&limit=10
+Authorization: Bearer {{accessToken}}
+
+### 19. RAG Chatbot – Product Q&A Through Gateway
+POST http://localhost:8000/chat
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "message": "Do you have any waterproof jackets for hiking?",
+  "history": []
+}
+
+### 19b. RAG Chatbot – Follow-up
+POST http://localhost:8000/chat
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "message": "What is the price?",
+  "history": [
+    { "role": "user", "content": "Do you have any waterproof jackets for hiking?" },
+    { "role": "assistant", "content": "Yes, we have the Stormguard Hiking Shell at $199." }
+  ]
+}
+
+### 20. Circuit Breaker Status (API Gateway Health)
+GET http://localhost:8000/health
+
+### 21. Backpressure Check – Event Ingestion Queue Depth
+GET http://localhost:8004/ingest/backpressure
+
+### 22. Ollama Status (requires OLLAMA_ENABLED=true)
+# GET http://localhost:11434/api/tags
+
+### 23. Qdrant Collection Status Through Catalog Service
+GET http://localhost:8000/catalog/vector/status
+Authorization: Bearer {{accessToken}}
+
+### 24. Semantic Reindex – Rebuild Product Embeddings
+POST http://localhost:8000/catalog/search/reindex?limit=250
+Authorization: Bearer {{accessToken}}
+
+### 25. Refresh Token
+POST http://localhost:8000/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "paste-refresh-token-here"
+}
+
+### 26. Validate Token (internal use)
+GET http://localhost:8000/auth/validate
+Authorization: Bearer {{accessToken}}
+
+### 27. List All Users (admin only)
+GET http://localhost:8000/users
+Authorization: Bearer {{accessToken}}
+
+### 28. Event Processor Dead Letter Queue Check
+# Run in SQL client:
+# SELECT id, event_type, failure_reason, original_status, created_at
+# FROM event_dead_letter
+# ORDER BY created_at DESC LIMIT 20;
+
+### 29. Tenant Dashboard Live SSE Stream
+# Open in browser: http://localhost:3002/stream/live?token=<your-jwt>
+# Or test with curl:
+# curl -N "http://localhost:3002/stream/live?token={{accessToken}}"
+
+### 30. Prometheus Metrics – All Services
+GET http://localhost:9090/api/v1/query?query=platform_requests_total
+
+### 31. Jaeger Traces UI
+GET http://localhost:16686
+
+### 32. Grafana Dashboards
+GET http://localhost:3001
+
+### 33. Redpanda Topic List
+# docker exec platform-redpanda rpk topic list
+
+### 34. Seed Ollama Model (run once after docker compose up)
+# docker exec platform-ollama ollama pull llama3.2
+
+### 35. Refresh Materialized View (analytics performance)
+# Run in SQL client:
+# SELECT refresh_daily_event_counts();
+
+### 36. Conversion Funnel – Product Drop-off Analysis
+GET http://localhost:8000/events/funnel?days=30
+Authorization: Bearer {{accessToken}}
+
+### 37. Top Products by Engagement Score
+GET http://localhost:8000/events/top-products?limit=10&days=30
+Authorization: Bearer {{accessToken}}
+
+### 38. Hourly Event Volume (last 24h)
+GET http://localhost:8000/events/hourly?hours=24
+Authorization: Bearer {{accessToken}}
+
+### 39. Create User in Tenant (admin only)
+POST http://localhost:8000/users
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "email": "analyst@acme.com",
+  "password": "securepass123",
+  "firstName": "Jane",
+  "lastName": "Analyst",
+  "role": "analyst"
+}
+
+### 40. Update User Role (admin only)
+PATCH http://localhost:8000/users/USER_ID_HERE
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "role": "viewer",
+  "isActive": true
+}
+
+### 41. Change Own Password
+POST http://localhost:8000/users/me/change-password
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "currentPassword": "password123",
+  "newPassword": "newSecurePass456"
+}
+
+### 42. List Tenants (admin only)
+GET http://localhost:8000/tenants
+Authorization: Bearer {{accessToken}}
+
+### 43. Create New Tenant (admin only)
+POST http://localhost:8000/tenants
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "New Customer Corp",
+  "slug": "newcustomer",
+  "plan": "pro"
+}
+
+### 44. Update Tenant Status (admin only)
+PATCH http://localhost:8000/tenants/TENANT_ID_HERE
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "status": "suspended"
+}
+
+### 45. Register New User
+POST http://localhost:8000/auth/register
+Content-Type: application/json
+
+{
+  "email": "newuser@acme.com",
+  "password": "securepass123",
+  "firstName": "New",
+  "lastName": "User",
+  "tenantSlug": "acme"
+}
+
+### 46. Backpressure Check
+GET http://localhost:8004/ingest/backpressure
+
+### 47. Smoke Test (run from terminal)
+# node scripts/smoke-test.js
+
+### 48. Generate Product Embeddings (run from terminal)
+# node scripts/generate-embeddings.js --tenant=acme --limit=500
+
+### 49. Per-Tenant Usage Metrics
+GET http://localhost:8000/events/usage?days=30
+Authorization: Bearer {{accessToken}}
+
+### 50. Dead Letter Queue – List
+GET http://localhost:8007/processor/dlq
+
+### 51. Dead Letter Queue – Replay (re-queue failed events)
+POST http://localhost:8007/processor/dlq/replay?limit=50
+
+### 52. Refresh Token (with rotation – returns new refreshToken)
+POST http://localhost:8000/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "paste-refresh-token-here"
+}
+
+### 53. Popular Recommendations (cached via Redis, TTL=120s)
+GET http://localhost:8000/recommendations/popular?limit=5&days=30
+Authorization: Bearer {{accessToken}}
+
+### 54. Per-Tenant Rate Limit Override
+# Set TENANT_RATE_LIMITS=acme_api_key_12345:500 in docker-compose to give acme 500 req/min
+# Default is 120 req/min for all tenants
+
+### 55. Istio mTLS Status (requires Istio installed)
+# kubectl get peerauthentication -n analytics-platform
+# kubectl get destinationrule -n analytics-platform

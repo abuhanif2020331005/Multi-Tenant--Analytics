@@ -1,0 +1,16 @@
+{
+    "name":  "event-processor-service",
+    "version":  "1.0.0",
+    "description":  "Asynchronous event outbox processor",
+    "main":  "src/index.js",
+    "scripts":  {
+                    "start":  "node src/index.js",
+                    "dev":  "node --watch src/index.js",
+                    "test":  "echo \u0027No tests yet\u0027 \u0026\u0026 exit 0"
+                },
+    "dependencies":  {
+                         "dotenv":  "^16.3.1",
+                         "kafkajs":  "^2.2.4",
+                         "pg":  "^8.11.3"
+                     }
+}

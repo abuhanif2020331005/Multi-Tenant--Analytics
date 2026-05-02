@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tenant Analytics Workspace</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="topbar">
+        <div>
+          <p class="kicker">Tenant Workspace</p>
+          <h1>Analytics & Recommendations</h1>
+          <p class="subtle">A product-facing view over auth, analytics, recommendation, and fraud services.</p>
+        </div>
+        <div class="session-bar">
+          <span id="session-status">Signed out</span>
+          <button id="logout-button" class="button ghost">Sign Out</button>
+        </div>
+      </section>
+
+      <section class="login-card">
+        <div class="card-header">
+          <h2>Tenant Login</h2>
+          <button id="login-button" class="button">Sign In</button>
+        </div>
+        <div class="form-grid">
+          <input id="tenant-slug" class="field" type="text" placeholder="Tenant slug" />
+          <input id="email" class="field" type="email" placeholder="Email" />
+          <input id="password" class="field" type="password" placeholder="Password" />
+        </div>
+        <div class="inline-actions">
+          <button id="seed-events-button" class="button secondary">Seed Demo Storefront Events</button>
+          <button id="refresh-all-button" class="button ghost">Refresh Everything</button>
+        </div>
+        <p id="login-message" class="subtle">Use the seeded demo account or your own tenant user.</p>
+      </section>
+
+      <section class="login-card">
+        <div class="card-header">
+          <h2>Catalog Editor</h2>
+          <button id="save-product-button" class="button secondary">Save Product</button>
+        </div>
+        <div class="catalog-form">
+          <input id="product-id" class="field" type="text" placeholder="product_id" />
+          <input id="product-name" class="field" type="text" placeholder="Product name" />
+          <input id="product-category" class="field" type="text" placeholder="Category" />
+          <input id="product-price" class="field" type="number" min="0" step="0.01" placeholder="Price" />
+          <textarea id="product-description" class="field field-area" placeholder="Description"></textarea>
+        </div>
+        <p id="catalog-message" class="subtle">Create or update catalog products for this tenant.</p>
+      </section>
+
+      <section class="kpi-grid">
+        <article class="kpi-card">
+          <span>Total Events</span>
+          <strong id="kpi-total-events">--</strong>
+        </article>
+        <article class="kpi-card">
+          <span>Unique Users</span>
+          <strong id="kpi-unique-users">--</strong>
+        </article>
+        <article class="kpi-card">
+          <span>Cart Rate</span>
+          <strong id="kpi-cart-rate">--</strong>
+        </article>
+        <article class="kpi-card">
+          <span>Conversion Rate</span>
+          <strong id="kpi-conversion-rate">--</strong>
+        </article>
+      </section>
+
+      <section class="cards">
+        <article class="card">
+          <h2>Profile</h2>
+          <div id="profile" class="content-box">Sign in to load profile.</div>
+        </article>
+        <article class="card">
+          <div class="card-header">
+            <h2>Popular Recommendations</h2>
+            <button id="refresh-recommendations" class="button secondary">Refresh</button>
+          </div>
+          <div id="recommendations" class="content-box">No recommendations loaded.</div>
+        </article>
+        <article class="card">
+          <div class="card-header">
+            <h2>Fraud Alerts</h2>
+            <button id="refresh-fraud" class="button secondary">Refresh</button>
+          </div>
+          <div id="fraud" class="content-box">No alerts loaded.</div>
+        </article>
+      </section>
+
+      <section class="cards">
+        <article class="card">
+          <div class="card-header">
+            <h2>For You</h2>
+            <button id="refresh-personal" class="button secondary">Refresh</button>
+          </div>
+          <div id="personal-recommendations" class="content-box">No personalized recommendations loaded.</div>
+        </article>
+        <article class="card">
+          <div class="card-header">
+            <h2>Catalog</h2>
+            <button id="refresh-catalog" class="button secondary">Refresh</button>
+          </div>
+          <div id="catalog" class="content-box">No catalog loaded.</div>
+        </article>
+        <article class="card">
+          <div class="card-header">
+            <h2>Similar Products</h2>
+            <button id="refresh-similar" class="button secondary">Refresh</button>
+          </div>
+          <p class="subtle">Uses the first catalog product as the source item.</p>
+          <div id="similar-products" class="content-box">No similar products loaded.</div>
+        </article>
+        <article class="card">
+          <div class="card-header">
+            <h2>Event Mix</h2>
+            <button id="refresh-summary" class="button secondary">Refresh</button>
+          </div>
+          <div id="event-mix" class="content-box">No event summary loaded.</div>
+        </article>
+        <article class="card card-span-2">
+          <div class="card-header">
+            <h2>Trend Chart</h2>
+            <button id="refresh-trends" class="button secondary">Refresh</button>
+          </div>
+          <div id="trend-chart" class="chart-box">No trend data loaded.</div>
+        </article>
+      </section>
+
+      <section class="cards">
+        <article class="card card-wide">
+          <div class="card-header">
+            <h2>Event Stream</h2>
+            <button id="refresh-events" class="button secondary">Refresh</button>
+          </div>
+          <div id="events" class="content-box">No events loaded.</div>
+        </article>
+        <article class="card card-wide">
+          <div class="card-header">
+            <h2>Event Stats</h2>
+            <button id="refresh-stats" class="button secondary">Refresh</button>
+          </div>
+          <div id="stats" class="content-box">No stats loaded.</div>
+        </article>
+      </section>
+
+      <section class="login-card">
+        <div class="card-header">
+          <h2>Product Assistant (RAG Chatbot)</h2>
+          <button id="chat-send-button" class="button">Ask</button>
+        </div>
+        <div class="form-grid">
+          <input id="chat-input" class="field" type="text" placeholder="e.g. What waterproof jackets do you have?" />
+        </div>
+        <div id="chat-history" class="content-box" style="min-height:120px;max-height:320px;overflow-y:auto;margin-top:0.75rem;">
+          Ask a question about the product catalog.
+        </div>
+        <p id="chat-message" class="subtle">Powered by local semantic search. Enable Ollama for LLM answers.</p>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

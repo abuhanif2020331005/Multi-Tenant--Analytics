@@ -1,0 +1,68 @@
+{{- if .Values.istio.enabled }}
+# Istio PeerAuthentication — enforce mTLS for all pods in the namespace
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: {{ include "backend-platform.fullname" . }}-mtls
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "backend-platform.labels" . | nindent 4 }}
+spec:
+  mtls:
+    mode: STRICT
+---
+# DestinationRules — require mTLS when calling each service
+{{- $services := list "api-gateway" "auth-service" "user-service" "analytics-service" "event-ingestion-service" "event-processor-service" "recommendation-service" "fraud-detection-service" "catalog-service" }}
+{{- range $services }}
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: {{ include "backend-platform.fullname" $ }}-{{ . }}-mtls
+  namespace: {{ $.Values.namespace.name }}
+  labels:
+    {{- include "backend-platform.labels" $ | nindent 4 }}
+spec:
+  host: {{ include "backend-platform.fullname" $ }}-{{ . }}.{{ $.Values.namespace.name }}.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+---
+{{- end }}
+# AuthorizationPolicy — only allow traffic from within the namespace
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ include "backend-platform.fullname" . }}-allow-internal
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "backend-platform.labels" . | nindent 4 }}
+spec:
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            namespaces:
+              - {{ .Values.namespace.name }}
+              - "istio-system"
+              - "monitoring"
+---
+# Allow ingress from the API gateway only for internal services
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ include "backend-platform.fullname" . }}-gateway-only
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "backend-platform.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: auth-service
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/{{ .Values.namespace.name }}/sa/{{ include "backend-platform.fullname" . }}-api-gateway"
+              - "cluster.local/ns/{{ .Values.namespace.name }}/sa/default"
+{{- end }}

@@ -1,0 +1,10 @@
+kubeconfig_path    = "~/.kube/config"
+kubeconfig_context = ""
+
+platform_namespace = "analytics-platform"
+argocd_namespace   = "argocd"
+
+enable_ingress_nginx   = true
+enable_cert_manager    = true
+enable_external_secrets = true
+enable_argocd          = true

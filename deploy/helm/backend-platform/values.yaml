@@ -1,0 +1,407 @@
+nameOverride: ""
+fullnameOverride: ""
+
+namespace:
+  create: true
+  name: analytics-platform
+
+secrets:
+  create: true
+  existingSecretName: ""
+  externalSecret:
+    enabled: false
+    name: backend-platform-external-secrets
+    refreshInterval: 1h
+    secretStoreRef:
+      name: cluster-secret-store
+      kind: ClusterSecretStore
+
+vault:
+  address: "http://vault:8200"
+
+networkPolicy:
+  enabled: false
+
+istio:
+  enabled: false
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    apiGateway:
+      host: api.local.example.com
+      path: /
+      pathType: Prefix
+    dashboardApp:
+      host: ops.local.example.com
+      path: /
+      pathType: Prefix
+    tenantDashboard:
+      host: app.local.example.com
+      path: /
+      pathType: Prefix
+  tls: []
+
+global:
+  imagePullPolicy: IfNotPresent
+  db:
+    host: backend-platform-postgres
+    port: "5432"
+    name: platform_db
+    user: platform_user
+    password: platform_pass
+  redis:
+    host: backend-platform-redis
+    port: "6379"
+  kafka:
+    brokers: backend-platform-redpanda:9092
+    topic: user-events
+    consumerGroup: event-processor-service-group
+  jwtSecret: your-super-secret-jwt-key-change-in-production
+  tenant:
+    defaultSlug: acme
+    defaultApiKey: acme_api_key_12345
+    defaultEmail: admin@acme.com
+    defaultPassword: password123
+
+images:
+  apiGateway:
+    repository: backend-platform/api-gateway
+    tag: latest
+  authService:
+    repository: backend-platform/auth-service
+    tag: latest
+  userService:
+    repository: backend-platform/user-service
+    tag: latest
+  analyticsService:
+    repository: backend-platform/analytics-service
+    tag: latest
+  eventIngestionService:
+    repository: backend-platform/event-ingestion-service
+    tag: latest
+  eventProcessorService:
+    repository: backend-platform/event-processor-service
+    tag: latest
+  recommendationService:
+    repository: backend-platform/recommendation-service
+    tag: latest
+  fraudDetectionService:
+    repository: backend-platform/fraud-detection-service
+    tag: latest
+  catalogService:
+    repository: backend-platform/catalog-service
+    tag: latest
+  dashboardApp:
+    repository: backend-platform/dashboard-app
+    tag: latest
+  tenantDashboard:
+    repository: backend-platform/tenant-dashboard
+    tag: latest
+  migrator:
+    repository: backend-platform/db-migrator
+    tag: latest
+  postgres:
+    repository: postgres
+    tag: "16-alpine"
+  redis:
+    repository: redis
+    tag: "7-alpine"
+  redpanda:
+    repository: docker.redpanda.com/redpandadata/redpanda
+    tag: "v25.1.2"
+  qdrant:
+    repository: qdrant/qdrant
+    tag: "v1.11.3"
+  jaeger:
+    repository: jaegertracing/all-in-one
+    tag: "1.58"
+  otelCollector:
+    repository: otel/opentelemetry-collector-contrib
+    tag: "0.108.0"
+
+infra:
+  postgres:
+    enabled: true
+    port: 5432
+    storage:
+      size: 10Gi
+    resources: {}
+  redis:
+    enabled: true
+    port: 6379
+    resources: {}
+  redpanda:
+    enabled: true
+    port: 9092
+    resources: {}
+  qdrant:
+    enabled: true
+    port: 6333
+    resources: {}
+  jaeger:
+    enabled: true
+    uiPort: 16686
+    grpcPort: 4317
+    httpPort: 4318
+    resources: {}
+  otelCollector:
+    enabled: true
+    grpcPort: 4317
+    httpPort: 4318
+    metricsPort: 9464
+    resources: {}
+
+migrator:
+  enabled: true
+  backoffLimit: 2
+  resources: {}
+
+services:
+  apiGateway:
+    enabled: true
+    kind: Deployment
+    replicaCount: 1
+    port: 8000
+    serviceType: ClusterIP
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    image:
+      repository: backend-platform/api-gateway
+      tag: latest
+    env:
+      NODE_ENV: development
+      PORT: "8000"
+      RATE_LIMIT_WINDOW_MS: "60000"
+      RATE_LIMIT_MAX_REQUESTS: "120"
+      REDIS_RATE_LIMIT_ENABLED: "true"
+      REDIS_HOST: backend-platform-redis
+      REDIS_PORT: "6379"
+      AUTH_SERVICE_URL: http://backend-platform-auth-service:8001
+      USER_SERVICE_URL: http://backend-platform-user-service:8002
+      ANALYTICS_SERVICE_URL: http://backend-platform-analytics-service:8003
+      EVENT_INGESTION_SERVICE_URL: http://backend-platform-event-ingestion-service:8004
+      RECOMMENDATION_SERVICE_URL: http://backend-platform-recommendation-service:8005
+      FRAUD_DETECTION_SERVICE_URL: http://backend-platform-fraud-detection-service:8006
+      CATALOG_SERVICE_URL: http://backend-platform-catalog-service:8008
+    resources: {}
+  authService:
+    enabled: true
+    kind: Deployment
+    replicaCount: 1
+    port: 8001
+    serviceType: ClusterIP
+    image:
+      repository: backend-platform/auth-service
+      tag: latest
+    env:
+      NODE_ENV: development
+      PORT: "8001"
+      DB_HOST: backend-platform-postgres
+      DB_PORT: "5432"
+      DB_USER: platform_user
+      DB_PASSWORD: platform_pass
+      DB_NAME: platform_db
+      REDIS_HOST: backend-platform-redis
+      REDIS_PORT: "6379"
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      JWT_EXPIRES_IN: 1h
+      REFRESH_TOKEN_EXPIRES_IN: 7d
+    resources: {}
+  userService:
+    enabled: true
+    kind: Deployment
+    replicaCount: 1
+    port: 8002
+    serviceType: ClusterIP
+    image:
+      repository: backend-platform/user-service
+      tag: latest
+    env:
+      NODE_ENV: development
+      PORT: "8002"
+      DB_HOST: backend-platform-postgres
+      DB_PORT: "5432"
+      DB_USER: platform_user
+      DB_PASSWORD: platform_pass
+      DB_NAME: platform_db
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+    resources: {}
+  analyticsService:
+    enabled: true
+    kind: Deployment
+    replicaCount: 1
+    port: 8003
+    serviceType: ClusterIP
+    image:
+      repository: backend-platform/analytics-service
+      tag: latest
+    env:
+      NODE_ENV: development
+      PORT: "8003"
+      DB_HOST: backend-platform-postgres
+      DB_PORT: "5432"
+      DB_USER: platform_user
+      DB_PASSWORD: platform_pass
+      DB_NAME: platform_db
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+    resources: {}
+  eventIngestionService:
+    enabled: true
+    kind: Deployment
+    replicaCount: 1
+    port: 8004
+    serviceType: ClusterIP
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 8
+      targetCPUUtilizationPercentage: 65
+    image:
+      repository: backend-platform/event-ingestion-service
+      tag: latest
+    env:
+      NODE_ENV: development
+      PORT: "8004"
+      DB_HOST: backend-platform-postgres
+      DB_PORT: "5432"
+      DB_USER: platform_user
+      DB_PASSWORD: platform_pass
+      DB_NAME: platform_db
+      INGESTION_MODE: broker
+      BROKER_ENABLED: "true"
+      KAFKA_BROKERS: backend-platform-redpanda:9092
+      KAFKA_TOPIC: user-events
+      QDRANT_ENABLED: "true"
+      QDRANT_URL: http://backend-platform-qdrant:6333
+      QDRANT_COLLECTION: product-embeddings
+      QDRANT_VECTOR_SIZE: "16"
+    resources: {}
+  eventProcessorService:
+    enabled: true
+    kind: Deployment
+    replicaCount: 1
+    port: 8007
+    serviceType: ClusterIP
+    image:
+      repository: backend-platform/event-processor-service
+      tag: latest
+    env:
+      NODE_ENV: development
+      PORT: "8007"
+      DB_HOST: backend-platform-postgres
+      DB_PORT: "5432"
+      DB_USER: platform_user
+      DB_PASSWORD: platform_pass
+      DB_NAME: platform_db
+      OUTBOX_BATCH_SIZE: "50"
+      OUTBOX_POLL_INTERVAL_MS: "5000"
+      OUTBOX_MAX_RETRY_COUNT: "3"
+      BROKER_ENABLED: "true"
+      KAFKA_BROKERS: backend-platform-redpanda:9092
+      KAFKA_TOPIC: user-events
+      KAFKA_CONSUMER_GROUP: event-processor-service-group
+    resources: {}
+  recommendationService:
+    enabled: true
+    kind: Deployment
+    replicaCount: 1
+    port: 8005
+    serviceType: ClusterIP
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 5
+      targetCPUUtilizationPercentage: 70
+    image:
+      repository: backend-platform/recommendation-service
+      tag: latest
+    env:
+      NODE_ENV: development
+      PORT: "8005"
+      DB_HOST: backend-platform-postgres
+      DB_PORT: "5432"
+      DB_USER: platform_user
+      DB_PASSWORD: platform_pass
+      DB_NAME: platform_db
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      QDRANT_ENABLED: "true"
+      QDRANT_URL: http://backend-platform-qdrant:6333
+      QDRANT_COLLECTION: product-embeddings
+      QDRANT_VECTOR_SIZE: "16"
+    resources: {}
+  fraudDetectionService:
+    enabled: true
+    kind: Deployment
+    replicaCount: 1
+    port: 8006
+    serviceType: ClusterIP
+    image:
+      repository: backend-platform/fraud-detection-service
+      tag: latest
+    env:
+      NODE_ENV: development
+      PORT: "8006"
+      DB_HOST: backend-platform-postgres
+      DB_PORT: "5432"
+      DB_USER: platform_user
+      DB_PASSWORD: platform_pass
+      DB_NAME: platform_db
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+    resources: {}
+  catalogService:
+    enabled: true
+    kind: Deployment
+    replicaCount: 1
+    port: 8008
+    serviceType: ClusterIP
+    image:
+      repository: backend-platform/catalog-service
+      tag: latest
+    env:
+      NODE_ENV: development
+      PORT: "8008"
+      DB_HOST: backend-platform-postgres
+      DB_PORT: "5432"
+      DB_USER: platform_user
+      DB_PASSWORD: platform_pass
+      DB_NAME: platform_db
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+    resources: {}
+  dashboardApp:
+    enabled: true
+    kind: Deployment
+    replicaCount: 1
+    port: 3000
+    serviceType: ClusterIP
+    image:
+      repository: backend-platform/dashboard-app
+      tag: latest
+    env:
+      PORT: "3000"
+      API_BASE_URL: http://backend-platform-api-gateway:8000
+      PROCESSOR_BASE_URL: http://backend-platform-event-processor-service:8007
+    resources: {}
+  tenantDashboard:
+    enabled: true
+    kind: Deployment
+    replicaCount: 1
+    port: 3002
+    serviceType: ClusterIP
+    image:
+      repository: backend-platform/tenant-dashboard
+      tag: latest
+    env:
+      PORT: "3002"
+      API_BASE_URL: http://backend-platform-api-gateway:8000
+      DEFAULT_TENANT_SLUG: acme
+      DEFAULT_TENANT_API_KEY: acme_api_key_12345
+      DEFAULT_LOGIN_EMAIL: admin@acme.com
+      DEFAULT_LOGIN_PASSWORD: password123
+    resources: {}

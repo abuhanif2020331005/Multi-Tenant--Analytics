@@ -1,0 +1,80 @@
+{
+  "title": "Analytics Deep Dive",
+  "uid": "platform-analytics",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "1m",
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Hourly Event Volume by Type",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 },
+      "targets": [
+        { "expr": "sum by (event_type) (rate(platform_route_status_total{path=~\"/events.*\"}[1h]))", "legendFormat": "{{event_type}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "id": 2,
+      "type": "bargauge",
+      "title": "Top Products – Engagement Score",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "topk(10, platform_product_engagement_score)", "legendFormat": "{{product_id}}" }
+      ],
+      "options": { "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Overall Cart Rate (30d)",
+      "gridPos": { "x": 12, "y": 8, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "platform_cart_rate_percent", "legendFormat": "Cart Rate %" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent", "thresholds": { "steps": [{ "color": "red", "value": null }, { "color": "yellow", "value": 5 }, { "color": "green", "value": 15 }] } } }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Overall Conversion Rate (30d)",
+      "gridPos": { "x": 18, "y": 8, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "platform_conversion_rate_percent", "legendFormat": "Conversion %" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent", "thresholds": { "steps": [{ "color": "red", "value": null }, { "color": "yellow", "value": 1 }, { "color": "green", "value": 3 }] } } }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Fraud Alerts (24h, risk ≥ 40)",
+      "gridPos": { "x": 12, "y": 12, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "sum(increase(platform_route_status_total{path=\"/fraud/alerts\"}[24h]))", "legendFormat": "Alerts" }
+      ],
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 5 }, { "color": "red", "value": 20 }] } } }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Outbox Queue Depth",
+      "gridPos": { "x": 18, "y": 12, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "platform_outbox_pending_total", "legendFormat": "Pending" }
+      ],
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 100 }, { "color": "red", "value": 500 }] } } }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Request Latency p95 – All Services",
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 8 },
+      "targets": [
+        { "expr": "platform_request_duration_max_ms", "legendFormat": "{{service}} {{path}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ms", "custom": { "lineWidth": 2 } } }
+    }
+  ]
+}

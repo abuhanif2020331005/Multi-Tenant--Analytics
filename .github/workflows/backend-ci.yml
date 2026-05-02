@@ -1,0 +1,210 @@
+name: Backend CI
+
+on:
+  push:
+    paths:
+      - ".github/workflows/backend-ci.yml"
+      - "database/**"
+      - "deploy/helm/**"
+      - "services/**"
+      - "shared/**"
+      - "package.json"
+      - "jest.config.js"
+  pull_request:
+    paths:
+      - ".github/workflows/backend-ci.yml"
+      - "database/**"
+      - "deploy/helm/**"
+      - "services/**"
+      - "shared/**"
+      - "package.json"
+      - "jest.config.js"
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend-platform
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend-platform/package-lock.json
+
+      - name: Install root dev deps (jest)
+        run: npm ci
+
+      - name: Run shared utility tests
+        run: npx jest --testPathPattern "shared/utils|shared/ai|shared/middleware|shared/cache" --runInBand --forceExit --no-coverage
+
+      - name: Install auth-service deps for service tests
+        run: npm ci
+        working-directory: backend-platform/services/auth-service
+
+      - name: Run auth-service tests
+        run: npx jest --testPathPattern "auth-service" --runInBand --forceExit --no-coverage
+        env:
+          JWT_SECRET: test-secret-for-ci
+
+  validate-services:
+    name: Syntax Check – ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - api-gateway
+          - auth-service
+          - user-service
+          - analytics-service
+          - event-ingestion-service
+          - event-processor-service
+          - recommendation-service
+          - fraud-detection-service
+          - catalog-service
+          - dashboard-app
+          - tenant-dashboard
+    defaults:
+      run:
+        working-directory: backend-platform
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Syntax check service entrypoint
+        run: |
+          if [ -f "services/${{ matrix.service }}/src/index.js" ]; then
+            node --check "services/${{ matrix.service }}/src/index.js"
+          elif [ -f "services/${{ matrix.service }}/src/server.js" ]; then
+            node --check "services/${{ matrix.service }}/src/server.js"
+          fi
+
+      - name: Syntax check all service JS files
+        run: |
+          find services/${{ matrix.service }}/src -name "*.js" | while read f; do
+            node --check "$f" || exit 1
+          done
+
+  validate-shared:
+    name: Syntax Check – Shared Modules
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend-platform
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Syntax check all shared modules
+        run: find shared -name "*.js" ! -name "*.test.js" | while read f; do node --check "$f" || exit 1; done
+
+      - name: Verify migration files
+        run: |
+          test -f database/migrations/init.sql
+          test -f database/migrations/2026-04-25-product-embeddings.sql
+          test -f database/migrations/2026-04-26-performance-indexes.sql
+
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [unit-tests, validate-services, validate-shared]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: platform_db
+          POSTGRES_USER: platform_user
+          POSTGRES_PASSWORD: platform_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U platform_user -d platform_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: backend-platform
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Apply DB migrations
+        run: |
+          PGPASSWORD=platform_pass psql -h localhost -U platform_user -d platform_db -f database/migrations/init.sql
+          PGPASSWORD=platform_pass psql -h localhost -U platform_user -d platform_db -f database/migrations/2026-04-25-product-embeddings.sql || true
+          PGPASSWORD=platform_pass psql -h localhost -U platform_user -d platform_db -f database/migrations/2026-04-26-performance-indexes.sql || true
+
+      - name: Install & health-check auth-service
+        run: |
+          npm ci --prefix services/auth-service
+          PORT=8001 DB_HOST=localhost DB_PORT=5432 DB_USER=platform_user \
+            DB_PASSWORD=platform_pass DB_NAME=platform_db \
+            REDIS_HOST=localhost REDIS_PORT=6379 \
+            JWT_SECRET=ci-secret JWT_EXPIRES_IN=1h REFRESH_TOKEN_EXPIRES_IN=7d \
+            node services/auth-service/src/index.js &
+          sleep 4
+          curl -sf http://localhost:8001/health | grep '"status":"healthy"'
+          kill %1 2>/dev/null || true
+
+      - name: Install & health-check analytics-service
+        run: |
+          npm ci --prefix services/analytics-service
+          PORT=8003 DB_HOST=localhost DB_PORT=5432 DB_USER=platform_user \
+            DB_PASSWORD=platform_pass DB_NAME=platform_db JWT_SECRET=ci-secret \
+            node services/analytics-service/src/index.js &
+          sleep 4
+          curl -sf http://localhost:8003/health | grep '"status":"healthy"'
+          kill %1 2>/dev/null || true
+
+      - name: Install & health-check event-ingestion-service
+        run: |
+          npm ci --prefix services/event-ingestion-service
+          PORT=8004 DB_HOST=localhost DB_PORT=5432 DB_USER=platform_user \
+            DB_PASSWORD=platform_pass DB_NAME=platform_db INGESTION_MODE=direct \
+            node services/event-ingestion-service/src/index.js &
+          sleep 4
+          curl -sf http://localhost:8004/health | grep '"status":"healthy"'
+          kill %1 2>/dev/null || true
+
+  helm-lint:
+    name: Helm Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend-platform
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.14.0
+
+      - name: Lint chart
+        run: helm lint deploy/helm/backend-platform
+
+      - name: Render chart (dry-run)
+        run: helm template backend-platform deploy/helm/backend-platform > /dev/null

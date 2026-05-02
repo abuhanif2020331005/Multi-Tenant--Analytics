@@ -5,17 +5,40 @@ const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
 
-// Validation schemas
 const loginSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
+  tenantSlug: Joi.string().trim().lowercase().optional(),
+});
+
+const registerSchema = Joi.object({
+  email: Joi.string().email().required(),
+  password: Joi.string().min(8).required(),
+  firstName: Joi.string().trim().max(100).optional(),
+  lastName: Joi.string().trim().max(100).optional(),
+  tenantSlug: Joi.string().trim().lowercase().required(),
+  inviteToken: Joi.string().optional(), // reserved for future invite flow
 });
 
 const refreshSchema = Joi.object({
   refreshToken: Joi.string().required(),
 });
 
-// POST /auth/login
+router.post('/register', async (req, res) => {
+  try {
+    const { error, value } = registerSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+
+    const result = await authService.register(value);
+    res.status(201).json(result);
+  } catch (error) {
+    const status = error.status || (error.message.includes('already') ? 409 : 400);
+    res.status(status).json({ error: error.message });
+  }
+});
+
 router.post('/login', async (req, res) => {
   try {
     const { error, value } = loginSchema.validate(req.body);
@@ -23,15 +46,14 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    const result = await authService.login(value.email, value.password);
+    const result = await authService.login(value);
     res.json(result);
   } catch (error) {
     console.error('Login error:', error);
-    res.status(401).json({ error: error.message });
+    res.status(error.status || 401).json({ error: error.message });
   }
 });
 
-// POST /auth/refresh
 router.post('/refresh', async (req, res) => {
   try {
     const { error, value } = refreshSchema.validate(req.body);
@@ -47,7 +69,6 @@ router.post('/refresh', async (req, res) => {
   }
 });
 
-// POST /auth/logout
 router.post('/logout', async (req, res) => {
   try {
     const { refreshToken } = req.body;
@@ -63,12 +84,10 @@ router.post('/logout', async (req, res) => {
   }
 });
 
-// GET /auth/validate
 router.get('/validate', authMiddleware, async (req, res) => {
   res.json({ valid: true, user: req.user });
 });
 
-// GET /auth/openapi
 router.get('/openapi', (req, res) => {
   res.json({
     openapi: '3.0.0',
@@ -91,6 +110,7 @@ router.get('/openapi', (req, res) => {
                   properties: {
                     email: { type: 'string', format: 'email' },
                     password: { type: 'string', minLength: 6 },
+                    tenantSlug: { type: 'string' },
                   },
                 },
               },

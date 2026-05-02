@@ -1,0 +1,58 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "api-gateway"
+    static_configs:
+      - targets: ["api-gateway:8000"]
+    metrics_path: /metrics/prometheus
+
+  - job_name: "auth-service"
+    static_configs:
+      - targets: ["auth-service:8001"]
+    metrics_path: /metrics/prometheus
+
+  - job_name: "user-service"
+    static_configs:
+      - targets: ["user-service:8002"]
+    metrics_path: /metrics/prometheus
+
+  - job_name: "analytics-service"
+    static_configs:
+      - targets: ["analytics-service:8003"]
+    metrics_path: /metrics/prometheus
+
+  - job_name: "event-ingestion-service"
+    static_configs:
+      - targets: ["event-ingestion-service:8004"]
+    metrics_path: /metrics/prometheus
+
+  - job_name: "recommendation-service"
+    static_configs:
+      - targets: ["recommendation-service:8005"]
+    metrics_path: /metrics/prometheus
+
+  - job_name: "fraud-detection-service"
+    static_configs:
+      - targets: ["fraud-detection-service:8006"]
+    metrics_path: /metrics/prometheus
+
+  - job_name: "catalog-service"
+    static_configs:
+      - targets: ["catalog-service:8008"]
+    metrics_path: /metrics/prometheus
+
+  - job_name: "event-processor-service"
+    static_configs:
+      - targets: ["event-processor-service:8007"]
+    metrics_path: /metrics/prometheus
+
+  - job_name: "dashboard-app"
+    static_configs:
+      - targets: ["dashboard-app:3000"]
+    metrics_path: /metrics/prometheus
+
+  - job_name: "otel-collector"
+    static_configs:
+      - targets: ["otel-collector:9464"]

@@ -1,0 +1,14 @@
+{
+    "name":  "api-gateway",
+    "version":  "1.0.0",
+    "description":  "Lightweight API gateway for platform services",
+    "main":  "src/index.js",
+    "scripts":  {
+                    "start":  "node src/index.js",
+                    "dev":  "node --watch src/index.js",
+                    "test":  "echo \u0027No tests yet\u0027 \u0026\u0026 exit 0"
+                },
+    "dependencies":  {
+                         "redis":  "^4.7.0"
+                     }
+}

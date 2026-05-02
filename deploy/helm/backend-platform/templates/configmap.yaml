@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "backend-platform.fullname" . }}-config
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "backend-platform.labels" . | nindent 4 }}
+data:
+  DB_HOST: {{ .Values.global.db.host | quote }}
+  DB_PORT: {{ .Values.global.db.port | quote }}
+  REDIS_HOST: {{ .Values.global.redis.host | quote }}
+  REDIS_PORT: {{ .Values.global.redis.port | quote }}
+  KAFKA_BROKERS: {{ .Values.global.kafka.brokers | quote }}
+  KAFKA_TOPIC: {{ .Values.global.kafka.topic | quote }}
+  KAFKA_CONSUMER_GROUP: {{ .Values.global.kafka.consumerGroup | quote }}
+  DEFAULT_TENANT_SLUG: {{ .Values.global.tenant.defaultSlug | quote }}
+  DEFAULT_LOGIN_EMAIL: {{ .Values.global.tenant.defaultEmail | quote }}

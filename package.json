@@ -1,0 +1,16 @@
+{
+  "name": "backend-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI-Powered Multi-Tenant Analytics & Recommendation Platform",
+  "scripts": {
+    "test": "jest --runInBand",
+    "test:coverage": "jest --coverage --runInBand",
+    "test:watch": "jest --watch",
+    "smoke": "node scripts/smoke-test.js",
+    "embeddings": "node scripts/generate-embeddings.js"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "db-migrator",
+  "version": "1.0.0",
+  "description": "Lightweight SQL migration runner for backend-platform",
+  "main": "src/run.js",
+  "scripts": {
+    "start": "node src/run.js"
+  },
+  "dependencies": {
+    "pg": "^8.11.3"
+  }
+}

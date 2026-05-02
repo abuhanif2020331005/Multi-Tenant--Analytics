@@ -1,0 +1,14 @@
+{
+    "name":  "tenant-dashboard",
+    "version":  "1.0.0",
+    "description":  "Lightweight tenant-facing analytics dashboard",
+    "main":  "src/server.js",
+    "scripts":  {
+                    "start":  "node src/server.js",
+                    "dev":  "node --watch src/server.js",
+                    "test":  "echo \u0027No tests yet\u0027 \u0026\u0026 exit 0"
+                },
+    "dependencies":  {
+                         "jsonwebtoken":  "^9.0.2"
+                     }
+}

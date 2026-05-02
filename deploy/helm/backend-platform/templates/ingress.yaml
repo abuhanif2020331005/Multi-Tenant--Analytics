@@ -1,0 +1,50 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "backend-platform.fullname" . }}-public
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "backend-platform.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- with .Values.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.hosts.apiGateway.host }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.hosts.apiGateway.path }}
+            pathType: {{ .Values.ingress.hosts.apiGateway.pathType }}
+            backend:
+              service:
+                name: {{ include "backend-platform.fullname" . }}-api-gateway
+                port:
+                  number: {{ .Values.services.apiGateway.port }}
+    - host: {{ .Values.ingress.hosts.dashboardApp.host }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.hosts.dashboardApp.path }}
+            pathType: {{ .Values.ingress.hosts.dashboardApp.pathType }}
+            backend:
+              service:
+                name: {{ include "backend-platform.fullname" . }}-dashboard-app
+                port:
+                  number: {{ .Values.services.dashboardApp.port }}
+    - host: {{ .Values.ingress.hosts.tenantDashboard.host }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.hosts.tenantDashboard.path }}
+            pathType: {{ .Values.ingress.hosts.tenantDashboard.pathType }}
+            backend:
+              service:
+                name: {{ include "backend-platform.fullname" . }}-tenant-dashboard
+                port:
+                  number: {{ .Values.services.tenantDashboard.port }}
+{{- end }}

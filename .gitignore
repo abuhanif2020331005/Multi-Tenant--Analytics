@@ -32,3 +32,8 @@ out/
 
 # Git
 .gitignore
+
+.env
+node_modules/
+.npm-cache/
+

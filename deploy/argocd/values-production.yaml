@@ -1,0 +1,200 @@
+namespace:
+  create: true
+  name: analytics-platform
+
+secrets:
+  create: false
+  existingSecretName: backend-platform-secrets
+  externalSecret:
+    enabled: true
+    refreshInterval: 5m
+    secretStoreRef:
+      name: cluster-secret-store
+      kind: ClusterSecretStore
+
+vault:
+  address: "http://vault.vault.svc.cluster.local:8200"
+
+networkPolicy:
+  enabled: true
+
+istio:
+  enabled: true
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: 5m
+  hosts:
+    apiGateway:
+      host: api.analytics.example.com
+      path: /
+      pathType: Prefix
+    dashboardApp:
+      host: ops.analytics.example.com
+      path: /
+      pathType: Prefix
+    tenantDashboard:
+      host: app.analytics.example.com
+      path: /
+      pathType: Prefix
+  tls:
+    - secretName: analytics-platform-tls
+      hosts:
+        - api.analytics.example.com
+        - ops.analytics.example.com
+        - app.analytics.example.com
+
+global:
+  imagePullPolicy: IfNotPresent
+  db:
+    host: backend-platform-postgres
+    port: "5432"
+    name: platform_db
+    user: platform_user
+    password: change-me-in-production
+  redis:
+    host: backend-platform-redis
+    port: "6379"
+  kafka:
+    brokers: backend-platform-redpanda:9092
+    topic: user-events
+    consumerGroup: event-processor-service-group
+  jwtSecret: change-me-in-production
+  tenant:
+    defaultSlug: acme
+    defaultApiKey: change-me-in-production
+    defaultEmail: admin@acme.com
+    defaultPassword: change-me-in-production
+
+images:
+  apiGateway:
+    repository: ghcr.io/YOUR_ORG/api-gateway
+    tag: latest
+  authService:
+    repository: ghcr.io/YOUR_ORG/auth-service
+    tag: latest
+  userService:
+    repository: ghcr.io/YOUR_ORG/user-service
+    tag: latest
+  analyticsService:
+    repository: ghcr.io/YOUR_ORG/analytics-service
+    tag: latest
+  eventIngestionService:
+    repository: ghcr.io/YOUR_ORG/event-ingestion-service
+    tag: latest
+  eventProcessorService:
+    repository: ghcr.io/YOUR_ORG/event-processor-service
+    tag: latest
+  recommendationService:
+    repository: ghcr.io/YOUR_ORG/recommendation-service
+    tag: latest
+  fraudDetectionService:
+    repository: ghcr.io/YOUR_ORG/fraud-detection-service
+    tag: latest
+  catalogService:
+    repository: ghcr.io/YOUR_ORG/catalog-service
+    tag: latest
+  dashboardApp:
+    repository: ghcr.io/YOUR_ORG/dashboard-app
+    tag: latest
+  tenantDashboard:
+    repository: ghcr.io/YOUR_ORG/tenant-dashboard
+    tag: latest
+  migrator:
+    repository: ghcr.io/YOUR_ORG/db-migrator
+    tag: latest
+  jaeger:
+    repository: jaegertracing/all-in-one
+    tag: "1.58"
+  otelCollector:
+    repository: otel/opentelemetry-collector-contrib
+    tag: "0.108.0"
+  qdrant:
+    repository: qdrant/qdrant
+    tag: "v1.11.3"
+
+infra:
+  jaeger:
+    enabled: true
+  otelCollector:
+    enabled: true
+  qdrant:
+    enabled: true
+
+services:
+  apiGateway:
+    replicaCount: 2
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+    env:
+      OTEL_ENABLED: "true"
+      OTEL_EXPORTER_URL: "http://backend-platform-otel-collector:4318"
+      GRPC_ENABLED: "false"
+  authService:
+    replicaCount: 2
+    env:
+      OTEL_ENABLED: "true"
+      OTEL_EXPORTER_URL: "http://backend-platform-otel-collector:4318"
+      GRPC_ENABLED: "true"
+      GRPC_PORT: "9001"
+  userService:
+    replicaCount: 2
+    env:
+      OTEL_ENABLED: "true"
+      OTEL_EXPORTER_URL: "http://backend-platform-otel-collector:4318"
+  analyticsService:
+    replicaCount: 2
+    env:
+      OTEL_ENABLED: "true"
+      OTEL_EXPORTER_URL: "http://backend-platform-otel-collector:4318"
+  eventIngestionService:
+    replicaCount: 2
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 8
+      targetCPUUtilizationPercentage: 65
+    env:
+      OTEL_ENABLED: "true"
+      OTEL_EXPORTER_URL: "http://backend-platform-otel-collector:4318"
+      INGESTION_MODE: "broker"
+      BROKER_ENABLED: "true"
+  eventProcessorService:
+    replicaCount: 1
+    env:
+      OTEL_ENABLED: "true"
+      OTEL_EXPORTER_URL: "http://backend-platform-otel-collector:4318"
+      BROKER_ENABLED: "true"
+  recommendationService:
+    replicaCount: 2
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 5
+      targetCPUUtilizationPercentage: 70
+    env:
+      OTEL_ENABLED: "true"
+      OTEL_EXPORTER_URL: "http://backend-platform-otel-collector:4318"
+      QDRANT_ENABLED: "true"
+  fraudDetectionService:
+    replicaCount: 2
+    env:
+      OTEL_ENABLED: "true"
+      OTEL_EXPORTER_URL: "http://backend-platform-otel-collector:4318"
+  catalogService:
+    replicaCount: 2
+    env:
+      OTEL_ENABLED: "true"
+      OTEL_EXPORTER_URL: "http://backend-platform-otel-collector:4318"
+      QDRANT_ENABLED: "true"
+      OLLAMA_ENABLED: "false"
+  dashboardApp:
+    replicaCount: 1
+  tenantDashboard:
+    replicaCount: 1

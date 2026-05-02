@@ -1,0 +1,40 @@
+{{- if .Values.infra.otelCollector.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "backend-platform.fullname" . }}-otel-collector
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "backend-platform.labels" . | nindent 4 }}
+data:
+  config.yml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+          http:
+
+    processors:
+      batch:
+
+    exporters:
+      logging:
+        verbosity: basic
+      otlp:
+        endpoint: {{ include "backend-platform.fullname" . }}-jaeger:{{ .Values.infra.jaeger.grpcPort }}
+        tls:
+          insecure: true
+      prometheus:
+        endpoint: 0.0.0.0:{{ .Values.infra.otelCollector.metricsPort }}
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [logging, otlp]
+        metrics:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [prometheus]
+{{- end }}

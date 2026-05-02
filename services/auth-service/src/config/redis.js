@@ -1,22 +1,12 @@
-const { createClient } = require('redis');
+/**
+ * Redis client for auth-service (session store, token blacklist).
+ * Uses the shared optional client so the service starts even if Redis is down.
+ */
+const { createOptionalRedisClient } = require('../../../../shared/cache/redis');
 
-const redisClient = createClient({
-  socket: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: process.env.REDIS_PORT || 6379,
-  },
-});
+const redisClient = createOptionalRedisClient();
 
-redisClient.on('connect', () => {
-  console.log('✅ Connected to Redis');
-});
-
-redisClient.on('error', (err) => {
-  console.error('❌ Redis error:', err);
-});
-
-(async () => {
-  await redisClient.connect();
-})();
+// Connect eagerly — failures are logged but don't crash the service
+redisClient.connect().catch(() => {});
 
 module.exports = redisClient;

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Multi-Tenant Analytics Control Room</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Control Room</p>
+          <h1>Multi-Tenant Analytics Platform</h1>
+          <p class="lede">
+            Service health, queue pressure, and recommendation or fraud APIs in one place.
+          </p>
+        </div>
+        <div class="hero-panel">
+          <div class="hero-stat">
+            <span>Gateway</span>
+            <strong id="gateway-status">Checking</strong>
+          </div>
+          <div class="hero-stat">
+            <span>Processor Queue</span>
+            <strong id="processor-pending">--</strong>
+          </div>
+          <div class="hero-stat">
+            <span>Failed Events</span>
+            <strong id="processor-failed">--</strong>
+          </div>
+          <div class="hero-stat">
+            <span>Live Stream</span>
+            <strong id="live-status">Connecting</strong>
+            <small id="live-updated">Waiting for first update</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid">
+        <article class="panel panel-wide">
+          <div class="panel-header">
+            <h2>Service Health</h2>
+            <button id="refresh-health" class="button">Refresh</button>
+          </div>
+          <div id="service-grid" class="service-grid"></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Processor Stats</h2>
+            <button id="refresh-processor" class="button">Refresh</button>
+          </div>
+          <dl id="processor-stats" class="stats-list"></dl>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Recommendations</h2>
+            <button id="load-recommendations" class="button">Load</button>
+          </div>
+          <p class="hint">Paste a bearer token from <code>test.http</code> to load live data.</p>
+          <input id="token-input" class="field" type="text" placeholder="Bearer token" />
+          <div id="recommendations-output" class="response-box">No data loaded yet.</div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Fraud Snapshot</h2>
+            <button id="load-fraud" class="button">Load</button>
+          </div>
+          <p class="hint">Reads recent alerts through the gateway.</p>
+          <div id="fraud-output" class="response-box">No alerts loaded yet.</div>
+        </article>
+
+        <article class="panel panel-wide">
+          <div class="panel-header">
+            <h2>Top Products by Engagement</h2>
+            <button id="load-top-products" class="button">Load</button>
+          </div>
+          <p class="hint">Ranked by views×1 + cart×3 + purchase×5 over 30 days.</p>
+          <div id="top-products-output" class="response-box">No data loaded yet.</div>
+        </article>
+
+        <article class="panel panel-wide">
+          <div class="panel-header">
+            <h2>Conversion Funnel</h2>
+            <button id="load-funnel" class="button">Load</button>
+          </div>
+          <p class="hint">View → Cart → Purchase drop-off per product.</p>
+          <div id="funnel-output" class="response-box">No data loaded yet.</div>
+        </article>
+
+        <article class="panel panel-wide">
+          <div class="panel-header">
+            <h2>Service Metrics</h2>
+            <button id="refresh-metrics" class="button">Refresh</button>
+          </div>
+          <div id="metrics-grid" class="metrics-grid"></div>
+        </article>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

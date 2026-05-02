@@ -1,0 +1,54 @@
+{{- if .Values.migrator.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "backend-platform.fullname" . }}-db-migrator
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "backend-platform.labels" . | nindent 4 }}
+spec:
+  backoffLimit: {{ .Values.migrator.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        {{- include "backend-platform.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: db-migrator
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: db-migrator
+          image: "{{ .Values.images.migrator.repository }}:{{ .Values.images.migrator.tag }}"
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "backend-platform.fullname" . }}-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "backend-platform.fullname" . }}-config
+                  key: DB_PORT
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ default (printf "%s-secrets" (include "backend-platform.fullname" .)) .Values.secrets.existingSecretName }}
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ default (printf "%s-secrets" (include "backend-platform.fullname" .)) .Values.secrets.existingSecretName }}
+                  key: DB_PASSWORD
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ default (printf "%s-secrets" (include "backend-platform.fullname" .)) .Values.secrets.existingSecretName }}
+                  key: DB_NAME
+            - name: MIGRATIONS_DIR
+              value: /migrations
+            - name: MIGRATION_SKIP_FILES
+              value: init.sql
+          resources:
+            {{- toYaml .Values.migrator.resources | nindent 12 }}
+{{- end }}
