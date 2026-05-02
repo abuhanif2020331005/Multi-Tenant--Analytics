@@ -9,8 +9,10 @@ const { createPgPool } = require('../../../shared/config/database');
 const { validateEnv } = require('../../../shared/config/env');
 const { createRequestContextMiddleware } = require('../../../shared/middleware/request-context');
 const { createSecurityHeadersMiddleware, createInjectionScanMiddleware } = require('../../../shared/middleware/security');
+const { requireAdminToken } = require('../../../shared/middleware/admin-auth');
 const { createLogger, serializeError } = require('../../../shared/observability/logger');
 const { createTracer } = require('../../../shared/observability/tracer');
+const { normalizeIngestionMode, shouldQueueEvents } = require('./ingestion-mode');
 const {
   createMetricsStore,
   createExpressMetricsMiddleware,
@@ -31,11 +33,19 @@ validateEnv('event-ingestion-service', [
 const app = express();
 const PORT = Number(process.env.PORT || 8004);
 const pool = createPgPool(Pool, 'event-ingestion-service');
-const ingestionMode = process.env.INGESTION_MODE || 'direct';
+const ingestionModeSelection = normalizeIngestionMode(process.env.INGESTION_MODE);
+const ingestionMode = ingestionModeSelection.normalizedMode;
 const brokerEnabled = String(process.env.BROKER_ENABLED || 'false').toLowerCase() === 'true';
 const metrics = createMetricsStore('event-ingestion-service');
 const logger = createLogger('event-ingestion-service');
 const tracer = createTracer('event-ingestion-service');
+
+if (ingestionModeSelection.usedFallback) {
+  logger.warn('invalid_ingestion_mode_fallback', {
+    requestedMode: ingestionModeSelection.requestedMode,
+    fallbackMode: ingestionMode,
+  });
+}
 
 const singleEventSchema = Joi.object({
   userId: Joi.string().trim().allow(null, '').optional(),
@@ -182,7 +192,7 @@ app.get('/metrics', createMetricsHandler(metrics));
 app.get('/metrics/prometheus', createPrometheusMetricsHandler(metrics));
 
 // Backpressure monitoring — queue depth and processing lag
-app.get('/ingest/backpressure', async (req, res) => {
+app.get('/ingest/backpressure', requireAdminToken, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT
@@ -235,10 +245,9 @@ app.post('/ingest/events', tenantApiKeyAuth, async (req, res) => {
     try {
       await client.query('BEGIN');
 
-      const acceptedIds =
-        ingestionMode === 'outbox'
-          ? await enqueueEvents(client, req.tenant, events, req, source)
-          : await persistEventsDirect(client, req.tenant, events, req, source);
+      const acceptedIds = shouldQueueEvents(ingestionMode)
+        ? await enqueueEvents(client, req.tenant, events, req, source)
+        : await persistEventsDirect(client, req.tenant, events, req, source);
 
       await client.query('COMMIT');
 

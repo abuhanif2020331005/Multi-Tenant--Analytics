@@ -83,6 +83,7 @@ services:
       - PORT=3000
       - API_BASE_URL=http://host.docker.internal:8000
       - PROCESSOR_BASE_URL=http://host.docker.internal:8007
+      - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:-}
     depends_on:
       db-migrator:
         condition: service_completed_successfully
@@ -415,6 +416,7 @@ services:
       - DB_NAME=platform_db
       - INGESTION_MODE=broker
       - BROKER_ENABLED=true
+      - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:-}
       - KAFKA_BROKERS=redpanda:9092
       - KAFKA_TOPIC=user-events
     depends_on:
@@ -448,6 +450,8 @@ services:
       - OUTBOX_BATCH_SIZE=50
       - OUTBOX_POLL_INTERVAL_MS=5000
       - OUTBOX_MAX_RETRY_COUNT=3
+      - AGGREGATE_REFRESH_INTERVAL_MS=3600000
+      - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:-}
       - BROKER_ENABLED=true
       - KAFKA_BROKERS=redpanda:9092
       - KAFKA_TOPIC=user-events

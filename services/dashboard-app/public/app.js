@@ -93,7 +93,7 @@ function renderProcessorStats(payload) {
 
 async function refreshProcessor() {
   try {
-    const payload = await fetchJson(state.config.processorBaseUrl + '/processor/stats');
+    const payload = await fetchJson('/api/processor/stats');
     renderProcessorStats(payload);
   } catch (error) {
     document.getElementById('processor-stats').innerHTML =

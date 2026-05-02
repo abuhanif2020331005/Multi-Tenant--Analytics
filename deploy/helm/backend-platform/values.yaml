@@ -276,6 +276,7 @@ services:
       DB_NAME: platform_db
       INGESTION_MODE: broker
       BROKER_ENABLED: "true"
+      ADMIN_API_TOKEN: ""
       KAFKA_BROKERS: backend-platform-redpanda:9092
       KAFKA_TOPIC: user-events
       QDRANT_ENABLED: "true"
@@ -303,6 +304,8 @@ services:
       OUTBOX_BATCH_SIZE: "50"
       OUTBOX_POLL_INTERVAL_MS: "5000"
       OUTBOX_MAX_RETRY_COUNT: "3"
+      AGGREGATE_REFRESH_INTERVAL_MS: "3600000"
+      ADMIN_API_TOKEN: ""
       BROKER_ENABLED: "true"
       KAFKA_BROKERS: backend-platform-redpanda:9092
       KAFKA_TOPIC: user-events
@@ -387,6 +390,7 @@ services:
       PORT: "3000"
       API_BASE_URL: http://backend-platform-api-gateway:8000
       PROCESSOR_BASE_URL: http://backend-platform-event-processor-service:8007
+      ADMIN_API_TOKEN: ""
     resources: {}
   tenantDashboard:
     enabled: true

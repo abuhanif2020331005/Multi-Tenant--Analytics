@@ -8,6 +8,7 @@ const publicDir = path.join(__dirname, '..', 'public');
 const startedAt = new Date().toISOString();
 const apiBaseUrl = process.env.API_BASE_URL || 'http://localhost:8000';
 const processorBaseUrl = process.env.PROCESSOR_BASE_URL || 'http://localhost:8007';
+const adminApiToken = process.env.ADMIN_API_TOKEN || '';
 const requestTotals = {
   total: 0,
   errors: 0,
@@ -63,8 +64,12 @@ function recordRequest(statusCode) {
   }
 }
 
-async function fetchJson(url) {
-  const response = await fetch(url);
+function adminHeaders() {
+  return adminApiToken ? { 'x-admin-token': adminApiToken } : {};
+}
+
+async function fetchJson(url, options = {}) {
+  const response = await fetch(url, options);
   if (!response.ok) {
     throw new Error(`${response.status} ${response.statusText}`);
   }
@@ -116,7 +121,9 @@ async function gatherMetricsSnapshot() {
 
 async function gatherProcessorSnapshot() {
   try {
-    return await fetchJson(processorBaseUrl + '/processor/stats');
+    return await fetchJson(processorBaseUrl + '/processor/stats', {
+      headers: adminHeaders(),
+    });
   } catch (error) {
     return {
       error: error.message,
@@ -189,8 +196,21 @@ const server = http.createServer((req, res) => {
     recordRequest(200);
     return sendJson(res, 200, {
       apiBaseUrl,
-      processorBaseUrl,
     });
+  }
+
+  if (requestPath === '/api/processor/stats') {
+    return fetchJson(processorBaseUrl + '/processor/stats', {
+      headers: adminHeaders(),
+    })
+      .then((payload) => {
+        recordRequest(200);
+        sendJson(res, 200, payload);
+      })
+      .catch((error) => {
+        recordRequest(502);
+        sendJson(res, 502, { error: error.message });
+      });
   }
 
   if (requestPath === '/stream/control-room') {

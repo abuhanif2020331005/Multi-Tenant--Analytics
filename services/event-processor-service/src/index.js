@@ -6,6 +6,7 @@ const { createPgPool } = require('../../../shared/config/database');
 const { validateEnv } = require('../../../shared/config/env');
 const { createRedpandaBroker } = require('../../../shared/broker/redpanda');
 const { attachContext } = require('../../../shared/middleware/request-context');
+const { isAdminAuthorized, sendAdminUnauthorized } = require('../../../shared/middleware/admin-auth');
 const { createLogger, serializeError } = require('../../../shared/observability/logger');
 const {
   createMetricsStore,
@@ -29,6 +30,7 @@ const port = Number(process.env.PORT || 8007);
 const batchSize = Number(process.env.OUTBOX_BATCH_SIZE || 50);
 const pollIntervalMs = Number(process.env.OUTBOX_POLL_INTERVAL_MS || 5000);
 const maxRetryCount = Number(process.env.OUTBOX_MAX_RETRY_COUNT || 3);
+const aggregateRefreshIntervalMs = Number(process.env.AGGREGATE_REFRESH_INTERVAL_MS || 0);
 const brokerEnabled = String(process.env.BROKER_ENABLED || 'false').toLowerCase() === 'true';
 const brokerTopic = process.env.KAFKA_TOPIC || 'user-events';
 const metrics = createMetricsStore('event-processor-service');
@@ -53,6 +55,8 @@ const runtimeStats = {
   consumedEvents: 0,
   brokerPublishFailures: 0,
   brokerConsumeFailures: 0,
+  aggregateRefreshes: 0,
+  lastAggregateRefreshAt: null,
 };
 
 function sendJson(res, statusCode, payload) {
@@ -62,6 +66,15 @@ function sendJson(res, statusCode, payload) {
     'Content-Length': Buffer.byteLength(body),
   });
   res.end(body);
+}
+
+function requireAdmin(req, res) {
+  if (isAdminAuthorized(req)) {
+    return true;
+  }
+
+  sendAdminUnauthorized(res);
+  return false;
 }
 
 async function getQueueStats() {
@@ -85,6 +98,21 @@ async function getQueueStats() {
     failedCount: Number(result.rows[0].failed_count || 0),
     deadLetteredCount: Number(result.rows[0].dead_lettered_count || 0),
     latestProcessedAt: result.rows[0].latest_processed_at,
+  };
+}
+
+async function refreshDailyEventCounts() {
+  await pool.query('SELECT refresh_daily_event_counts()');
+  runtimeStats.aggregateRefreshes += 1;
+  runtimeStats.lastAggregateRefreshAt = new Date().toISOString();
+  logger.info('daily_event_counts_refreshed', {
+    aggregateRefreshes: runtimeStats.aggregateRefreshes,
+    refreshedAt: runtimeStats.lastAggregateRefreshAt,
+  });
+
+  return {
+    refreshedAt: runtimeStats.lastAggregateRefreshAt,
+    aggregateRefreshes: runtimeStats.aggregateRefreshes,
   };
 }
 
@@ -504,22 +532,46 @@ const server = http.createServer(async (req, res) => {
 
   if (requestUrl.pathname === '/processor/stats') {
     trackNodeRequest(metrics, req, res, '/processor/stats');
+    if (!requireAdmin(req, res)) return;
     try {
       const queue = await getQueueStats();
       return sendJson(res, 200, {
         service: 'event-processor-service',
         runtime: runtimeStats,
         queue,
-        config: { batchSize, pollIntervalMs, maxRetryCount, brokerEnabled: broker.enabled, brokerTopic },
+        config: {
+          batchSize,
+          pollIntervalMs,
+          maxRetryCount,
+          brokerEnabled: broker.enabled,
+          brokerTopic,
+          aggregateRefreshIntervalMs,
+        },
       });
     } catch (error) {
       return sendJson(res, 500, { error: 'Failed to load processor stats' });
     }
   }
 
+  if (requestUrl.pathname === '/processor/aggregates/refresh' && req.method === 'POST') {
+    trackNodeRequest(metrics, req, res, '/processor/aggregates/refresh');
+    if (!requireAdmin(req, res)) return;
+    try {
+      const result = await refreshDailyEventCounts();
+      return sendJson(res, 200, {
+        message: 'Daily event counts refreshed',
+        ...result,
+      });
+    } catch (error) {
+      logger.error('aggregate_refresh_failed', { error: serializeError(error) });
+      return sendJson(res, 500, { error: 'Failed to refresh daily event counts' });
+    }
+  }
+
   // DLQ replay — re-queue dead-lettered events back to pending
   if (requestUrl.pathname === '/processor/dlq/replay' && req.method === 'POST') {
     trackNodeRequest(metrics, req, res, '/processor/dlq/replay');
+    if (!requireAdmin(req, res)) return;
     try {
       const limitParam = Number(requestUrl.searchParams?.get('limit') || 50);
       const limit = Math.min(limitParam, 200);
@@ -571,6 +623,7 @@ const server = http.createServer(async (req, res) => {
   // DLQ list
   if (requestUrl.pathname === '/processor/dlq' && req.method === 'GET') {
     trackNodeRequest(metrics, req, res, '/processor/dlq');
+    if (!requireAdmin(req, res)) return;
     try {
       const result = await pool.query(
         `SELECT id, outbox_id, tenant_id, event_type, failure_reason, original_status, created_at
@@ -609,6 +662,7 @@ logger.info('service_started', {
   batchSize,
   pollIntervalMs,
   maxRetryCount,
+  aggregateRefreshIntervalMs,
   brokerEnabled,
   brokerTopic,
 });
@@ -641,8 +695,23 @@ if (broker.enabled) {
 }
 runLoop();
 
+let aggregateRefreshTimer = null;
+if (aggregateRefreshIntervalMs > 0) {
+  aggregateRefreshTimer = setInterval(() => {
+    refreshDailyEventCounts().catch((error) => {
+      runtimeStats.lastErrorAt = new Date().toISOString();
+      logger.error('scheduled_aggregate_refresh_failed', {
+        error: serializeError(error),
+      });
+    });
+  }, aggregateRefreshIntervalMs);
+}
+
 process.on('SIGTERM', async () => {
   logger.info('service_stopping', { signal: 'SIGTERM' });
+  if (aggregateRefreshTimer) {
+    clearInterval(aggregateRefreshTimer);
+  }
   server.close();
   await broker.disconnect();
   await pool.end();

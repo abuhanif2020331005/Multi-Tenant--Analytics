@@ -139,6 +139,18 @@ GET /fraud/analyze?userId=u1&windowMinutes=60&velocityThreshold=3
 GET /fraud/alerts?hours=24&minRiskScore=40
 ```
 
+### Operational Endpoints
+
+Set `ADMIN_API_TOKEN` to require `x-admin-token: <token>` or `Authorization: Bearer <token>` on operational endpoints.
+
+```
+GET  /ingest/backpressure
+GET  /processor/stats
+GET  /processor/dlq
+POST /processor/dlq/replay?limit=50
+POST /processor/aggregates/refresh
+```
+
 ## Shared Modules
 
 | Module | Purpose |
@@ -210,6 +222,8 @@ Copy `.env` and adjust for your environment. Key variables:
 | `JWT_SECRET` | dev value | Must be changed in production |
 | `INGESTION_MODE` | `outbox` | `direct`, `outbox`, or `broker` |
 | `BROKER_ENABLED` | `false` | Enable Kafka/Redpanda integration |
+| `ADMIN_API_TOKEN` | unset | Optional token for processor/backpressure admin endpoints |
+| `AGGREGATE_REFRESH_INTERVAL_MS` | `0` | Optional scheduled refresh interval for daily analytics materialized view |
 | `QDRANT_ENABLED` | `false` | Enable vector search |
 | `OLLAMA_ENABLED` | `false` | Enable LLM chatbot |
 | `OTEL_ENABLED` | `false` | Enable OTel trace export |
